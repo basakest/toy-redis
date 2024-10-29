@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cerrno>
 #include <cassert>
+#include <fcntl.h>
 
 const size_t k_max_msg = 4096;
 
@@ -14,6 +15,7 @@ static void die(const char *msg);
 static int32_t one_request(int connfd);
 static int32_t read_full(int fd, char *buf, size_t n);
 static int32_t write_all(int fd, const char *buf, size_t n);
+static void fd_set_nb(int fd);
 
 int main()
 {
@@ -144,4 +146,22 @@ static int32_t one_request(int connfd)
     memcpy(wbuf, &len, 4);
     memcpy(&wbuf[4], reply, len);
     return write_all(connfd, wbuf, 4 + len);
+}
+
+static void fd_set_nb(int fd)
+{
+    errno = 0;
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (errno) {
+        die("fcntl() error");
+        return;
+    }
+
+    flags |= O_NONBLOCK;
+
+    errno = 0;
+    (void) fcntl(fd, F_SETFL, flags);
+    if (errno) {
+        die("fcntl() error");
+    }
 }
